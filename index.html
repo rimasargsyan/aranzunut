@@ -8,6 +8,7 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; background: #F5F1EC; }
@@ -30,14 +31,16 @@ const { useState, useEffect, useRef } = React;
 const SUPABASE_URL = 'https://nscdrpnjhzmpstxfqapf.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zY2RycG5qaHptcHN0eGZxYXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzNDczNDcsImV4cCI6MjEwMTkyMzM0N30.uhsWeAdMiNpLXXHJjgEg7nYYIWV_Oqst-eCeCaY0B64';
 
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const AVATAR_COLORS = ['#8B5A9F', '#C97064', '#6B9080', '#E8A87C', '#4A7C8C', '#B5A48A'];
 
-async function sb(path, options = {}) {
+async function sb(path, options = {}, accessToken) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...options,
     headers: {
       apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     },
@@ -53,21 +56,27 @@ async function sb(path, options = {}) {
 function Avatar({ name, color, size = 44 }) {
   return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: size * 0.4, flexShrink: 0, fontFamily: "'Poppins', sans-serif" }}>
-      {name.charAt(0).toUpperCase()}
+      {(name || '?').charAt(0).toUpperCase()}
     </div>
   );
 }
 
 function App() {
+  const [session, setSession] = useState(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
   const [profiles, setProfiles] = useState({});
   const [posts, setPosts] = useState([]);
   const [comments, setComments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [nameInput, setNameInput] = useState('');
+
+  const [authMode, setAuthMode] = useState('signin'); // signin | signup
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [usernameInput, setUsernameInput] = useState('');
   const [colorChoice, setColorChoice] = useState(AVATAR_COLORS[0]);
   const [authBusy, setAuthBusy] = useState(false);
+
   const [activeTab, setActiveTab] = useState('feed');
   const [newPostText, setNewPostText] = useState('');
   const [commentDrafts, setCommentDrafts] = useState({});
@@ -76,15 +85,28 @@ function App() {
   const [editingBio, setEditingBio] = useState(false);
   const pollRef = useRef(null);
 
+  useEffect(() => {
+    supabaseClient.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setSessionLoading(false);
+    });
+    const { data: listener } = supabaseClient.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const token = session?.access_token;
+
   const refreshAll = async () => {
     try {
       const [profRows, postRows, commentRows] = await Promise.all([
-        sb('profiles?select=*'),
-        sb('posts?select=*&order=id.desc'),
-        sb('comments?select=*&order=id.asc'),
+        sb('profiles?select=*', {}, token),
+        sb('posts?select=*&order=id.desc', {}, token),
+        sb('comments?select=*&order=id.asc', {}, token),
       ]);
       const profMap = {};
-      (profRows || []).forEach((p) => { profMap[p.username] = p; });
+      (profRows || []).forEach((p) => { profMap[p.user_id] = p; });
       setProfiles(profMap);
       setPosts(postRows || []);
       setComments(commentRows || []);
@@ -93,79 +115,115 @@ function App() {
   };
 
   useEffect(() => {
-    (async () => { await refreshAll(); setLoading(false); })();
+    if (sessionLoading) return;
+    (async () => { await refreshAll(); setDataLoading(false); })();
     pollRef.current = setInterval(refreshAll, 4000);
     return () => clearInterval(pollRef.current);
-  }, []);
+  }, [sessionLoading, session]);
 
-  const handleAuth = async () => {
-    const name = nameInput.trim();
-    if (!name) return;
+  const handleSignUp = async () => {
+    const email = emailInput.trim();
+    const password = passwordInput;
+    const username = usernameInput.trim();
+    if (!email || !password || !username) { setError('Լրացրու բոլոր դաշտերը'); return; }
     setAuthBusy(true);
+    setError(null);
     try {
-      const existing = await sb(`profiles?username=eq.${encodeURIComponent(name)}&select=*`);
-      let profile;
-      if (existing && existing.length > 0) {
-        profile = existing[0];
-      } else {
-        const created = await sb('profiles', {
-          method: 'POST',
-          headers: { Prefer: 'return=representation' },
-          body: JSON.stringify({ username: name, bio: '', avatar_color: colorChoice }),
-        });
-        profile = created[0];
-      }
+      const { data, error: signUpError } = await supabaseClient.auth.signUp({ email, password });
+      if (signUpError) throw signUpError;
+      const newToken = data.session?.access_token;
+      await sb('profiles', {
+        method: 'POST',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ user_id: data.user.id, username, bio: '', avatar_color: colorChoice }),
+      }, newToken);
       await refreshAll();
-      setCurrentUser(profile.username);
-      setBioDraft(profile.bio || '');
     } catch (e) { setError(e.message); } finally { setAuthBusy(false); }
   };
 
-  const logout = () => { setCurrentUser(null); setNameInput(''); setActiveTab('feed'); };
+  const handleSignIn = async () => {
+    const email = emailInput.trim();
+    const password = passwordInput;
+    if (!email || !password) { setError('Լրացրու email և գաղտնաբառ'); return; }
+    setAuthBusy(true);
+    setError(null);
+    try {
+      const { error: signInError } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+    } catch (e) { setError(e.message); } finally { setAuthBusy(false); }
+  };
 
-  if (loading) {
+  const logout = async () => {
+    await supabaseClient.auth.signOut();
+    setActiveTab('feed');
+  };
+
+  if (sessionLoading || (session && dataLoading)) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', justifyContent: 'center', color: '#A89F92' }}>
-        <span className="spin">⏳</span> Կապվում ենք database-ին...
+        <span className="spin">⏳</span> Բեռնվում է...
       </div>
     );
   }
 
-  if (!currentUser) {
+  if (!session) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         <div style={{ background: 'white', borderRadius: 20, padding: 32, maxWidth: 380, width: '100%', boxShadow: '0 4px 20px rgba(43,38,34,0.08)', border: '1px solid #EDE7DE' }}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #E8A87C, #C97064)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'white', fontFamily: "'Poppins', sans-serif", fontSize: 24, margin: '0 auto 12px' }}>Ա</div>
             <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 22 }}>Առանձնուտ</div>
-            <div style={{ color: '#A89F92', fontSize: 13.5, marginTop: 4 }}>Իրական database, կիսվում է բոլորի հետ</div>
+            <div style={{ color: '#A89F92', fontSize: 13.5, marginTop: 4 }}>Իրական հաշիվ, իրական database</div>
           </div>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20, background: '#F5F1EC', borderRadius: 12, padding: 4 }}>
+            <button onClick={() => { setAuthMode('signin'); setError(null); }} style={{ flex: 1, border: 'none', borderRadius: 9, padding: '9px 0', fontWeight: 600, fontSize: 13.5, background: authMode === 'signin' ? 'white' : 'transparent', color: authMode === 'signin' ? '#2B2622' : '#A89F92', boxShadow: authMode === 'signin' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>Մուտք</button>
+            <button onClick={() => { setAuthMode('signup'); setError(null); }} style={{ flex: 1, border: 'none', borderRadius: 9, padding: '9px 0', fontWeight: 600, fontSize: 13.5, background: authMode === 'signup' ? 'white' : 'transparent', color: authMode === 'signup' ? '#2B2622' : '#A89F92', boxShadow: authMode === 'signup' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>Գրանցում</button>
+          </div>
+
           {error && <div style={{ background: '#FDECEC', color: '#B14343', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, marginBottom: 16 }}>Սխալ. {error}</div>}
-          <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Քո անունը</label>
-          <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAuth()} placeholder="օր. Ռիմա Հակոբյան" style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 14px', fontSize: 15, outline: 'none', marginTop: 6, marginBottom: 18 }} />
-          <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Ընտրիր գույն</label>
-          <div style={{ display: 'flex', gap: 10, marginTop: 8, marginBottom: 22 }}>
-            {AVATAR_COLORS.map((c) => (
-              <button key={c} onClick={() => setColorChoice(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: colorChoice === c ? '3px solid #2B2622' : '3px solid transparent', cursor: 'pointer', padding: 0 }} />
-            ))}
-          </div>
-          <button onClick={handleAuth} disabled={!nameInput.trim() || authBusy} style={{ width: '100%', background: nameInput.trim() ? '#8B5A9F' : '#E5DFD5', color: nameInput.trim() ? 'white' : '#A89F92', border: 'none', borderRadius: 12, padding: '13px 0', fontWeight: 700, fontSize: 15 }}>
-            {authBusy ? 'Մուտք...' : 'Մուտք / Գրանցվել'}
+
+          {authMode === 'signup' && (
+            <React.Fragment>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Անուն</label>
+              <input value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)} placeholder="օր. Ռիմա Հակոբյան" style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 14px', fontSize: 15, outline: 'none', marginTop: 6, marginBottom: 16 }} />
+            </React.Fragment>
+          )}
+
+          <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Email</label>
+          <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} placeholder="you@example.com" style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 14px', fontSize: 15, outline: 'none', marginTop: 6, marginBottom: 16 }} />
+
+          <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Գաղտնաբառ</label>
+          <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (authMode === 'signup' ? handleSignUp() : handleSignIn())} placeholder="Առնվազն 6 նիշ" style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 14px', fontSize: 15, outline: 'none', marginTop: 6, marginBottom: 16 }} />
+
+          {authMode === 'signup' && (
+            <React.Fragment>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Ընտրիր գույն</label>
+              <div style={{ display: 'flex', gap: 10, marginTop: 8, marginBottom: 22 }}>
+                {AVATAR_COLORS.map((c) => (
+                  <button key={c} onClick={() => setColorChoice(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: colorChoice === c ? '3px solid #2B2622' : '3px solid transparent', cursor: 'pointer', padding: 0 }} />
+                ))}
+              </div>
+            </React.Fragment>
+          )}
+
+          <button onClick={authMode === 'signup' ? handleSignUp : handleSignIn} disabled={authBusy} style={{ width: '100%', background: '#8B5A9F', color: 'white', border: 'none', borderRadius: 12, padding: '13px 0', fontWeight: 700, fontSize: 15, marginTop: authMode === 'signin' ? 6 : 0 }}>
+            {authBusy ? 'Սպասիր...' : authMode === 'signup' ? 'Գրանցվել' : 'Մուտք գործել'}
           </button>
-          <div style={{ fontSize: 12, color: '#A89F92', marginTop: 14, textAlign: 'center', lineHeight: 1.5 }}>Տվյալները պահվում են իրական database-ում և տեսանելի են բոլորին, ովքեր օգտագործում են այս app-ը։</div>
+          <div style={{ fontSize: 12, color: '#A89F92', marginTop: 14, textAlign: 'center', lineHeight: 1.5 }}>Քո հաշիվը պաշտպանված է գաղտնաբառով։ Ուրիշ ոչ ոք չի կարող մուտք գործել քո տեղից։</div>
         </div>
       </div>
     );
   }
 
-  const me = profiles[currentUser] || { username: currentUser, avatar_color: '#8B5A9F', bio: '' };
-  const allUsers = Object.values(profiles).filter((u) => u.username !== currentUser);
+  const me = profiles[session.user.id] || { username: session.user.email, avatar_color: '#8B5A9F', bio: '' };
+  const allUsers = Object.values(profiles).filter((u) => u.user_id !== session.user.id);
 
   const publishPost = async () => {
     const text = newPostText.trim();
     if (!text) return;
     try {
-      await sb('posts', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ author: currentUser, content: text, likes_count: 0 }) });
+      await sb('posts', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ author: me.username, content: text, likes_count: 0 }) }, token);
       setNewPostText('');
       await refreshAll();
     } catch (e) { setError(e.message); }
@@ -173,7 +231,7 @@ function App() {
 
   const likePost = async (post) => {
     try {
-      await sb(`posts?id=eq.${post.id}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ likes_count: (post.likes_count || 0) + 1 }) });
+      await sb(`posts?id=eq.${post.id}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ likes_count: (post.likes_count || 0) + 1 }) }, token);
       await refreshAll();
     } catch (e) { setError(e.message); }
   };
@@ -182,7 +240,7 @@ function App() {
     const text = (commentDrafts[postId] || '').trim();
     if (!text) return;
     try {
-      await sb('comments', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ post_id: postId, author: currentUser, content: text }) });
+      await sb('comments', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ post_id: postId, author: me.username, content: text }) }, token);
       setCommentDrafts((prev) => ({ ...prev, [postId]: '' }));
       setOpenComments((prev) => ({ ...prev, [postId]: true }));
       await refreshAll();
@@ -191,7 +249,7 @@ function App() {
 
   const saveBio = async () => {
     try {
-      await sb(`profiles?username=eq.${encodeURIComponent(currentUser)}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ bio: bioDraft }) });
+      await sb(`profiles?user_id=eq.${session.user.id}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ bio: bioDraft }) }, token);
       setEditingBio(false);
       await refreshAll();
     } catch (e) { setError(e.message); }
@@ -207,8 +265,12 @@ function App() {
     return `${Math.floor(hrs / 24)} օր առաջ`;
   };
 
+  function findAuthorProfile(name) {
+    return Object.values(profiles).find((p) => p.username === name) || { username: name, avatar_color: '#8B5A9F' };
+  }
+
   function PostCard({ post }) {
-    const author = profiles[post.author] || { username: post.author, avatar_color: '#8B5A9F' };
+    const author = findAuthorProfile(post.author);
     const postComments = comments.filter((c) => c.post_id === post.id);
     const isOpen = !!openComments[post.id];
     return (
@@ -230,7 +292,7 @@ function App() {
         {isOpen && (
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #F0EBE3' }}>
             {postComments.map((c) => {
-              const cAuthor = profiles[c.author] || { username: c.author, avatar_color: '#B5A48A' };
+              const cAuthor = findAuthorProfile(c.author);
               return (
                 <div key={c.id} style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                   <Avatar name={cAuthor.username} color={cAuthor.avatar_color} size={30} />
@@ -287,6 +349,7 @@ function App() {
             <div style={{ background: 'white', borderRadius: 16, padding: 24, marginBottom: 16, boxShadow: '0 1px 3px rgba(43,38,34,0.06)', border: '1px solid #EDE7DE', textAlign: 'center' }}>
               <Avatar name={me.username} color={me.avatar_color} size={72} />
               <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 20, marginTop: 12 }}>{me.username}</div>
+              <div style={{ fontSize: 12, color: '#A89F92', marginTop: 2 }}>{session.user.email}</div>
               {editingBio ? (
                 <div style={{ marginTop: 14 }}>
                   <textarea value={bioDraft} onChange={(e) => setBioDraft(e.target.value)} placeholder="Գրիր մի քանի բառ քո մասին..." rows={2} style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 10, padding: 10, fontSize: 14, outline: 'none', resize: 'none' }} />
@@ -300,8 +363,8 @@ function App() {
               )}
             </div>
             <div style={{ fontWeight: 700, fontSize: 15, margin: '4px 0 10px' }}>Իմ հրապարակումները</div>
-            {posts.filter((p) => p.author === currentUser).length === 0 && <div style={{ textAlign: 'center', color: '#A89F92', padding: '24px 0', fontSize: 14 }}>Դեռ ոչինչ չես հրապարակել։</div>}
-            {posts.filter((p) => p.author === currentUser).map((post) => <PostCard key={post.id} post={post} />)}
+            {posts.filter((p) => p.author === me.username).length === 0 && <div style={{ textAlign: 'center', color: '#A89F92', padding: '24px 0', fontSize: 14 }}>Դեռ ոչինչ չես հրապարակել։</div>}
+            {posts.filter((p) => p.author === me.username).map((post) => <PostCard key={post.id} post={post} />)}
           </div>
         )}
         {activeTab === 'friends' && (
@@ -309,7 +372,7 @@ function App() {
             <div style={{ fontWeight: 700, fontSize: 15, margin: '4px 0 10px' }}>Բոլոր գրանցվածները</div>
             {allUsers.length === 0 && <div style={{ textAlign: 'center', color: '#A89F92', padding: '24px 0', fontSize: 14 }}>Դեռ ուրիշ ոչ ոք չի գրանցվել։ Ուղարկիր այս app-ի հղումը ընկերներիդ 🙂</div>}
             {allUsers.map((u) => (
-              <div key={u.username} style={{ background: 'white', borderRadius: 14, padding: 12, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #EDE7DE' }}>
+              <div key={u.user_id} style={{ background: 'white', borderRadius: 14, padding: 12, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #EDE7DE' }}>
                 <Avatar name={u.username} color={u.avatar_color} />
                 <div style={{ flex: 1, fontWeight: 600, fontSize: 14.5 }}>{u.username}</div>
               </div>
