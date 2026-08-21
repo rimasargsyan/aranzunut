@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Առանձնուտ</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; background: #F5F1EC; }
+  button { cursor: pointer; font-family: inherit; }
+  textarea, input { font-family: inherit; }
+  ::placeholder { color: #A89F92; }
+  .action-btn { transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease; }
+  .action-btn:active { transform: scale(0.96); }
+  .post-card { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const SUPABASE_URL = 'https://nscdrpnjhzmpstxfqapf.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zY2RycG5qaHptcHN0eGZxYXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzNDczNDcsImV4cCI6MjEwMTkyMzM0N30.uhsWeAdMiNpLXXHJjgEg7nYYIWV_Oqst-eCeCaY0B64';
+
+const AVATAR_COLORS = ['#8B5A9F', '#C97064', '#6B9080', '#E8A87C', '#4A7C8C', '#B5A48A'];
+
+async function sb(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Supabase ${res.status}: ${text}`);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+function Avatar({ name, color, size = 44 }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: size * 0.4, flexShrink: 0, fontFamily: "'Poppins', sans-serif" }}>
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+function App() {
+  const [profiles, setProfiles] = useState({});
+  const [posts, setPosts] = useState([]);
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [nameInput, setNameInput] = useState('');
+  const [colorChoice, setColorChoice] = useState(AVATAR_COLORS[0]);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [activeTab, setActiveTab] = useState('feed');
+  const [newPostText, setNewPostText] = useState('');
+  const [commentDrafts, setCommentDrafts] = useState({});
+  const [openComments, setOpenComments] = useState({});
+  const [bioDraft, setBioDraft] = useState('');
+  const [editingBio, setEditingBio] = useState(false);
+  const pollRef = useRef(null);
+
+  const refreshAll = async () => {
+    try {
+      const [profRows, postRows, commentRows] = await Promise.all([
+        sb('profiles?select=*'),
+        sb('posts?select=*&order=id.desc'),
+        sb('comments?select=*&order=id.asc'),
+      ]);
+      const profMap = {};
+      (profRows || []).forEach((p) => { profMap[p.username] = p; });
+      setProfiles(profMap);
+      setPosts(postRows || []);
+      setComments(commentRows || []);
+      setError(null);
+    } catch (e) { setError(e.message); }
+  };
+
+  useEffect(() => {
+    (async () => { await refreshAll(); setLoading(false); })();
+    pollRef.current = setInterval(refreshAll, 4000);
+    return () => clearInterval(pollRef.current);
+  }, []);
+
+  const handleAuth = async () => {
+    const name = nameInput.trim();
+    if (!name) return;
+    setAuthBusy(true);
+    try {
+      const existing = await sb(`profiles?username=eq.${encodeURIComponent(name)}&select=*`);
+      let profile;
+      if (existing && existing.length > 0) {
+        profile = existing[0];
+      } else {
+        const created = await sb('profiles', {
+          method: 'POST',
+          headers: { Prefer: 'return=representation' },
+          body: JSON.stringify({ username: name, bio: '', avatar_color: colorChoice }),
+        });
+        profile = created[0];
+      }
+      await refreshAll();
+      setCurrentUser(profile.username);
+      setBioDraft(profile.bio || '');
+    } catch (e) { setError(e.message); } finally { setAuthBusy(false); }
+  };
+
+  const logout = () => { setCurrentUser(null); setNameInput(''); setActiveTab('feed'); };
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', justifyContent: 'center', color: '#A89F92' }}>
+        <span className="spin">⏳</span> Կապվում ենք database-ին...
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+        <div style={{ background: 'white', borderRadius: 20, padding: 32, maxWidth: 380, width: '100%', boxShadow: '0 4px 20px rgba(43,38,34,0.08)', border: '1px solid #EDE7DE' }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #E8A87C, #C97064)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'white', fontFamily: "'Poppins', sans-serif", fontSize: 24, margin: '0 auto 12px' }}>Ա</div>
+            <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 22 }}>Առանձնուտ</div>
+            <div style={{ color: '#A89F92', fontSize: 13.5, marginTop: 4 }}>Իրական database, կիսվում է բոլորի հետ</div>
+          </div>
+          {error && <div style={{ background: '#FDECEC', color: '#B14343', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, marginBottom: 16 }}>Սխալ. {error}</div>}
+          <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Քո անունը</label>
+          <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAuth()} placeholder="օր. Ռիմա Հակոբյան" style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 14px', fontSize: 15, outline: 'none', marginTop: 6, marginBottom: 18 }} />
+          <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Ընտրիր գույն</label>
+          <div style={{ display: 'flex', gap: 10, marginTop: 8, marginBottom: 22 }}>
+            {AVATAR_COLORS.map((c) => (
+              <button key={c} onClick={() => setColorChoice(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: colorChoice === c ? '3px solid #2B2622' : '3px solid transparent', cursor: 'pointer', padding: 0 }} />
+            ))}
+          </div>
+          <button onClick={handleAuth} disabled={!nameInput.trim() || authBusy} style={{ width: '100%', background: nameInput.trim() ? '#8B5A9F' : '#E5DFD5', color: nameInput.trim() ? 'white' : '#A89F92', border: 'none', borderRadius: 12, padding: '13px 0', fontWeight: 700, fontSize: 15 }}>
+            {authBusy ? 'Մուտք...' : 'Մուտք / Գրանցվել'}
+          </button>
+          <div style={{ fontSize: 12, color: '#A89F92', marginTop: 14, textAlign: 'center', lineHeight: 1.5 }}>Տվյալները պահվում են իրական database-ում և տեսանելի են բոլորին, ովքեր օգտագործում են այս app-ը։</div>
+        </div>
+      </div>
+    );
+  }
+
+  const me = profiles[currentUser] || { username: currentUser, avatar_color: '#8B5A9F', bio: '' };
+  const allUsers = Object.values(profiles).filter((u) => u.username !== currentUser);
+
+  const publishPost = async () => {
+    const text = newPostText.trim();
+    if (!text) return;
+    try {
+      await sb('posts', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ author: currentUser, content: text, likes_count: 0 }) });
+      setNewPostText('');
+      await refreshAll();
+    } catch (e) { setError(e.message); }
+  };
+
+  const likePost = async (post) => {
+    try {
+      await sb(`posts?id=eq.${post.id}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ likes_count: (post.likes_count || 0) + 1 }) });
+      await refreshAll();
+    } catch (e) { setError(e.message); }
+  };
+
+  const addComment = async (postId) => {
+    const text = (commentDrafts[postId] || '').trim();
+    if (!text) return;
+    try {
+      await sb('comments', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ post_id: postId, author: currentUser, content: text }) });
+      setCommentDrafts((prev) => ({ ...prev, [postId]: '' }));
+      setOpenComments((prev) => ({ ...prev, [postId]: true }));
+      await refreshAll();
+    } catch (e) { setError(e.message); }
+  };
+
+  const saveBio = async () => {
+    try {
+      await sb(`profiles?username=eq.${encodeURIComponent(currentUser)}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ bio: bioDraft }) });
+      setEditingBio(false);
+      await refreshAll();
+    } catch (e) { setError(e.message); }
+  };
+
+  const timeAgo = (ts) => {
+    if (!ts) return '';
+    const mins = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+    if (mins < 1) return 'հենց նոր';
+    if (mins < 60) return `${mins} րոպե առաջ`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} ժամ առաջ`;
+    return `${Math.floor(hrs / 24)} օր առաջ`;
+  };
+
+  function PostCard({ post }) {
+    const author = profiles[post.author] || { username: post.author, avatar_color: '#8B5A9F' };
+    const postComments = comments.filter((c) => c.post_id === post.id);
+    const isOpen = !!openComments[post.id];
+    return (
+      <div className="post-card" style={{ background: 'white', borderRadius: 16, padding: 16, marginBottom: 14, boxShadow: '0 1px 3px rgba(43,38,34,0.06)', border: '1px solid #EDE7DE' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
+          <Avatar name={author.username} color={author.avatar_color} />
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 15 }}>{author.username}</div>
+            <div style={{ fontSize: 12.5, color: '#A89F92' }}>{timeAgo(post.created_at)}</div>
+          </div>
+        </div>
+        <p style={{ fontSize: 15, lineHeight: 1.6, margin: '0 0 14px', whiteSpace: 'pre-wrap' }}>{post.content}</p>
+        {post.likes_count > 0 && <div style={{ fontSize: 12.5, color: '#A89F92', marginBottom: 8 }}>❤️ {post.likes_count} հավանում{post.likes_count > 1 ? 'ներ' : ''}</div>}
+        <div style={{ display: 'flex', borderTop: '1px solid #F0EBE3', paddingTop: 10, gap: 4 }}>
+          <button className="action-btn" onClick={() => likePost(post)} style={{ flex: 1, border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 0', color: '#6B6255', fontWeight: 600, fontSize: 13.5 }}>❤️ Հավանել</button>
+          <button className="action-btn" onClick={() => setOpenComments((p) => ({ ...p, [post.id]: !p[post.id] }))} style={{ flex: 1, border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 0', color: '#6B6255', fontWeight: 600, fontSize: 13.5 }}>💬 Մեկնաբանել {postComments.length > 0 ? `(${postComments.length})` : ''}</button>
+          <button className="action-btn" style={{ flex: 1, border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 0', color: '#6B6255', fontWeight: 600, fontSize: 13.5 }}>🔗 Կիսվել</button>
+        </div>
+        {isOpen && (
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #F0EBE3' }}>
+            {postComments.map((c) => {
+              const cAuthor = profiles[c.author] || { username: c.author, avatar_color: '#B5A48A' };
+              return (
+                <div key={c.id} style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <Avatar name={cAuthor.username} color={cAuthor.avatar_color} size={30} />
+                  <div style={{ background: '#F9F6F1', borderRadius: 12, padding: '7px 12px', flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 12.5 }}>{cAuthor.username}</div>
+                    <div style={{ fontSize: 13.5 }}>{c.content}</div>
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+              <Avatar name={me.username} color={me.avatar_color} size={30} />
+              <input value={commentDrafts[post.id] || ''} onChange={(e) => setCommentDrafts((prev) => ({ ...prev, [post.id]: e.target.value }))} onKeyDown={(e) => e.key === 'Enter' && addComment(post.id)} placeholder="Գրիր մեկնաբանություն..." style={{ flex: 1, border: '1px solid #EDE7DE', borderRadius: 20, padding: '8px 14px', fontSize: 13.5, outline: 'none' }} />
+              <button className="action-btn" onClick={() => addComment(post.id)} style={{ background: '#8B5A9F', border: 'none', borderRadius: '50%', width: 32, height: 32, color: 'white', flexShrink: 0 }}>➤</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', color: '#2B2622' }}>
+      <header style={{ background: '#2B2622', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg, #E8A87C, #C97064)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'white', fontFamily: "'Poppins', sans-serif", fontSize: 16 }}>Ա</div>
+          <span style={{ color: '#F5F1EC', fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 19 }}>Առանձնուտ</span>
+        </div>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <span style={{ fontSize: 18 }}>🔔</span>
+          <button onClick={logout} title="Ելք" style={{ background: 'none', border: 'none', fontSize: 18 }}>🚪</button>
+          <Avatar name={me.username} color={me.avatar_color} size={32} />
+        </div>
+      </header>
+      {error && <div style={{ background: '#FDECEC', color: '#B14343', padding: '10px 16px', fontSize: 12.5, textAlign: 'center' }}>Սխալ. {error}</div>}
+      <main style={{ maxWidth: 560, margin: '0 auto', padding: '16px 12px 90px' }}>
+        {activeTab === 'feed' && (
+          <React.Fragment>
+            <div style={{ background: 'white', borderRadius: 16, padding: 16, marginBottom: 16, boxShadow: '0 1px 3px rgba(43,38,34,0.06)', border: '1px solid #EDE7DE' }}>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <Avatar name={me.username} color={me.avatar_color} />
+                <textarea value={newPostText} onChange={(e) => setNewPostText(e.target.value)} placeholder={`Ի՞նչ ես մտածում, ${me.username}...`} rows={2} style={{ flex: 1, border: 'none', outline: 'none', resize: 'none', fontSize: 15, background: '#F9F6F1', borderRadius: 12, padding: '10px 14px' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, paddingTop: 12, borderTop: '1px solid #F0EBE3' }}>
+                <button className="action-btn" onClick={publishPost} disabled={!newPostText.trim()} style={{ background: newPostText.trim() ? '#8B5A9F' : '#E5DFD5', color: newPostText.trim() ? 'white' : '#A89F92', border: 'none', borderRadius: 10, padding: '8px 18px', fontWeight: 600, fontSize: 14 }}>Հրապարակել</button>
+              </div>
+            </div>
+            {posts.length === 0 && <div style={{ textAlign: 'center', color: '#A89F92', padding: '40px 0', fontSize: 14 }}>Դեռ ոչ մի հրապարակում չկա։ Եղիր առաջինը 👋</div>}
+            {posts.map((post) => <PostCard key={post.id} post={post} />)}
+          </React.Fragment>
+        )}
+        {activeTab === 'profile' && (
+          <div>
+            <div style={{ background: 'white', borderRadius: 16, padding: 24, marginBottom: 16, boxShadow: '0 1px 3px rgba(43,38,34,0.06)', border: '1px solid #EDE7DE', textAlign: 'center' }}>
+              <Avatar name={me.username} color={me.avatar_color} size={72} />
+              <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 20, marginTop: 12 }}>{me.username}</div>
+              {editingBio ? (
+                <div style={{ marginTop: 14 }}>
+                  <textarea value={bioDraft} onChange={(e) => setBioDraft(e.target.value)} placeholder="Գրիր մի քանի բառ քո մասին..." rows={2} style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 10, padding: 10, fontSize: 14, outline: 'none', resize: 'none' }} />
+                  <button onClick={saveBio} style={{ marginTop: 8, background: '#8B5A9F', color: 'white', border: 'none', borderRadius: 10, padding: '8px 18px', fontWeight: 600, fontSize: 13.5 }}>Պահպանել</button>
+                </div>
+              ) : (
+                <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 14, color: me.bio ? '#2B2622' : '#A89F92' }}>{me.bio || 'Դեռ ոչինչ չես գրել քո մասին։'}</div>
+                  <button onClick={() => { setEditingBio(true); setBioDraft(me.bio); }} style={{ background: 'none', border: 'none', fontSize: 13 }}>✏️</button>
+                </div>
+              )}
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 15, margin: '4px 0 10px' }}>Իմ հրապարակումները</div>
+            {posts.filter((p) => p.author === currentUser).length === 0 && <div style={{ textAlign: 'center', color: '#A89F92', padding: '24px 0', fontSize: 14 }}>Դեռ ոչինչ չես հրապարակել։</div>}
+            {posts.filter((p) => p.author === currentUser).map((post) => <PostCard key={post.id} post={post} />)}
+          </div>
+        )}
+        {activeTab === 'friends' && (
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, margin: '4px 0 10px' }}>Բոլոր գրանցվածները</div>
+            {allUsers.length === 0 && <div style={{ textAlign: 'center', color: '#A89F92', padding: '24px 0', fontSize: 14 }}>Դեռ ուրիշ ոչ ոք չի գրանցվել։ Ուղարկիր այս app-ի հղումը ընկերներիդ 🙂</div>}
+            {allUsers.map((u) => (
+              <div key={u.username} style={{ background: 'white', borderRadius: 14, padding: 12, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #EDE7DE' }}>
+                <Avatar name={u.username} color={u.avatar_color} />
+                <div style={{ flex: 1, fontWeight: 600, fontSize: 14.5 }}>{u.username}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', borderTop: '1px solid #EDE7DE', display: 'flex', justifyContent: 'space-around', padding: '10px 0 14px', maxWidth: 560, margin: '0 auto' }}>
+        {[{ key: 'feed', icon: '🏠', label: 'Գլխավոր' }, { key: 'friends', icon: '👥', label: 'Անդամներ' }, { key: 'profile', icon: '👤', label: 'Իմ էջը' }].map(({ key, icon, label }) => (
+          <button key={key} className="action-btn" onClick={() => setActiveTab(key)} style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: activeTab === key ? '#8B5A9F' : '#A89F92' }}>
+            <span style={{ fontSize: 20 }}>{icon}</span>
+            <span style={{ fontSize: 11, fontWeight: 600 }}>{label}</span>
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
