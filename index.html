@@ -134,10 +134,13 @@ function App() {
     setError(null);
     try {
       const { data, error: signUpError } = await supabaseClient.auth.signUp({
-        email,
-        password,
-        options: { data: { username, avatar_color: colorChoice } },
-      });
+  email,
+  password,
+  options: {
+    data: { username, avatar_color: colorChoice },
+    emailRedirectTo: 'https://rimasargsyan.github.io/aranzunut',
+  },
+});
       if (signUpError) throw signUpError;
       // Պրոֆիլը ստեղծվում է ավտոմատ database trigger-ով (handle_new_user)
       if (!data.session) {
