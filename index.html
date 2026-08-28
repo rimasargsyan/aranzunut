@@ -78,6 +78,7 @@ function App() {
   const [authBusy, setAuthBusy] = useState(false);
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [resetSent, setResetSent] = useState(false);
+  const [signUpDone, setSignUpDone] = useState(false);
 
   const [activeTab, setActiveTab] = useState('feed');
   const [newPostText, setNewPostText] = useState('');
@@ -132,15 +133,19 @@ function App() {
     setAuthBusy(true);
     setError(null);
     try {
-      const { data, error: signUpError } = await supabaseClient.auth.signUp({ email, password });
+      const { data, error: signUpError } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: { data: { username, avatar_color: colorChoice } },
+      });
       if (signUpError) throw signUpError;
-      const newToken = data.session?.access_token;
-      await sb('profiles', {
-        method: 'POST',
-        headers: { Prefer: 'return=representation' },
-        body: JSON.stringify({ user_id: data.user.id, username, bio: '', avatar_color: colorChoice }),
-      }, newToken);
-      await refreshAll();
+      // Պրոֆիլը ստեղծվում է ավտոմատ database trigger-ով (handle_new_user)
+      if (!data.session) {
+        // Email confirmation պահանջվում է. session դեռ չկա
+        setSignUpDone(true);
+      } else {
+        await refreshAll();
+      }
     } catch (e) { setError(e.message); } finally { setAuthBusy(false); }
   };
 
@@ -242,6 +247,20 @@ function App() {
         </div>
       );
     }
+
+    if (signUpDone) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: 32, maxWidth: 380, width: '100%', boxShadow: '0 4px 20px rgba(43,38,34,0.08)', border: '1px solid #EDE7DE', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 10 }}>📧</div>
+            <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 20, marginBottom: 10 }}>Ստուգիր քո email-ը</div>
+            <div style={{ color: '#6B6255', fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>Ուղարկեցինք հաստատման հղում {emailInput}-ին։ Բացիր այն, որ մուտք գործես Առանձնուտ։</div>
+            <button onClick={() => { setSignUpDone(false); setAuthMode('signin'); setEmailInput(''); setPasswordInput(''); setUsernameInput(''); }} style={{ background: 'none', border: 'none', color: '#8B5A9F', fontWeight: 600, fontSize: 13.5 }}>← Վերադառնալ մուտքին</button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         <div style={{ background: 'white', borderRadius: 20, padding: 32, maxWidth: 380, width: '100%', boxShadow: '0 4px 20px rgba(43,38,34,0.08)', border: '1px solid #EDE7DE' }}>
