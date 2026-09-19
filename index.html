@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="hy">
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Առանձնուտ</title>
+<title>Aranzunut</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -35,6 +35,143 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
 const AVATAR_COLORS = ['#8B5A9F', '#C97064', '#6B9080', '#E8A87C', '#4A7C8C', '#B5A48A'];
 
+const LANGS = [
+  { code: 'en', label: 'EN' },
+  { code: 'hy', label: 'ՀԱՅ' },
+];
+
+const translations = {
+  en: {
+    appName: 'Aranzunut',
+    tagline: 'Real account, real database',
+    tabSignin: 'Sign in',
+    tabSignup: 'Sign up',
+    nameLabel: 'Name',
+    namePlaceholder: 'e.g. Rima Hakobyan',
+    emailLabel: 'Email',
+    passwordLabel: 'Password',
+    passwordHint: 'At least 8 characters, one uppercase letter and one special character (!@#$% etc.)',
+    passwordPlaceholderSignup: 'e.g. Passw0rd!',
+    passwordPlaceholderSignin: 'Password',
+    forgotPassword: 'Forgot your password?',
+    chooseColor: 'Choose a color',
+    signUpBtn: 'Sign up',
+    signInBtn: 'Log in',
+    pleaseWait: 'Please wait...',
+    accountProtected: 'Your account is protected by a password. No one else can log in as you.',
+    resetTitle: 'Reset your password',
+    resetSentMsg: "We've sent a link to your email ✅ Open it and follow the instructions.",
+    resetDesc: "Enter your email, we'll send you a link to reset your password",
+    sendLinkBtn: 'Send link',
+    backToSignin: '← Back to sign in',
+    checkEmailTitle: 'Check your email',
+    checkEmailMsg: (email) => `We've sent a confirmation link to ${email}. Open it to log in to Aranzunut.`,
+    newPasswordTitle: 'New password',
+    newPasswordLabel: 'New password',
+    savePasswordBtn: 'Save password',
+    errFillAll: 'Please fill in all fields',
+    errEmailPassword: 'Please enter email and password',
+    errEnterEmail: 'Please enter your email',
+    errPwLength: 'Password must be at least 8 characters',
+    errPwUpper: 'Password must contain at least one uppercase letter (A-Z)',
+    errPwSpecial: 'Password must contain at least one special character (!@#$% etc.)',
+    loading: 'Loading...',
+    errorPrefix: 'Error: ',
+    logout: 'Log out',
+    feedPlaceholder: (name) => `What's on your mind, ${name}...`,
+    postBtn: 'Post',
+    noPostsYet: 'No posts yet. Be the first 👋',
+    likesCount: (n) => `❤️ ${n} like${n > 1 ? 's' : ''}`,
+    likeBtn: '❤️ Like',
+    commentBtn: (n) => `💬 Comment${n > 0 ? ` (${n})` : ''}`,
+    shareBtn: '🔗 Share',
+    commentPlaceholder: 'Write a comment...',
+    bioPlaceholder: 'Write a few words about yourself...',
+    save: 'Save',
+    noBio: "You haven't written anything about yourself yet.",
+    myPosts: 'My posts',
+    noOwnPosts: "You haven't posted anything yet.",
+    allMembers: 'All members',
+    noMembers: "No one else has joined yet. Share this app's link with your friends 🙂",
+    navHome: 'Home',
+    navMembers: 'Members',
+    navProfile: 'My page',
+    justNow: 'just now',
+    minutesAgo: (n) => `${n}m ago`,
+    hoursAgo: (n) => `${n}h ago`,
+    daysAgo: (n) => `${n}d ago`,
+    language: 'Language',
+  },
+  hy: {
+    appName: 'Առանձնուտ',
+    tagline: 'Իրական հաշիվ, իրական database',
+    tabSignin: 'Մուտք',
+    tabSignup: 'Գրանցում',
+    nameLabel: 'Անուն',
+    namePlaceholder: 'օր. Ռիմա Հակոբյան',
+    emailLabel: 'Email',
+    passwordLabel: 'Գաղտնաբառ',
+    passwordHint: 'Առնվազն 8 նիշ, մեկ մեծատառ և մեկ հատուկ նշան (!@#$% և այլն)',
+    passwordPlaceholderSignup: 'Օր. Passw0rd!',
+    passwordPlaceholderSignin: 'Գաղտնաբառ',
+    forgotPassword: 'Մոռացե՞լ եք գաղտնաբառը',
+    chooseColor: 'Ընտրիր գույն',
+    signUpBtn: 'Գրանցվել',
+    signInBtn: 'Մուտք գործել',
+    pleaseWait: 'Սպասիր...',
+    accountProtected: 'Քո հաշիվը պաշտպանված է գաղտնաբառով։ Ուրիշ ոչ ոք չի կարող մուտք գործել քո տեղից։',
+    resetTitle: 'Վերականգնել գաղտնաբառը',
+    resetSentMsg: 'Ուղարկեցինք հղում քո email-ին ✅ Բացիր այն և հետևիր հրահանգներին։',
+    resetDesc: 'Գրիր քո email-ը, կուղարկենք գաղտնաբառը փոխելու հղում',
+    sendLinkBtn: 'Ուղարկել հղումը',
+    backToSignin: '← Վերադառնալ մուտքին',
+    checkEmailTitle: 'Ստուգիր քո email-ը',
+    checkEmailMsg: (email) => `Ուղարկեցինք հաստատման հղում ${email}-ին։ Բացիր այն, որ մուտք գործես Առանձնուտ։`,
+    newPasswordTitle: 'Նոր գաղտնաբառ',
+    newPasswordLabel: 'Նոր գաղտնաբառ',
+    savePasswordBtn: 'Պահպանել գաղտնաբառը',
+    errFillAll: 'Լրացրու բոլոր դաշտերը',
+    errEmailPassword: 'Լրացրու email և գաղտնաբառ',
+    errEnterEmail: 'Գրիր քո email-ը',
+    errPwLength: 'Գաղտնաբառը պետք է լինի առնվազն 8 նիշ',
+    errPwUpper: 'Գաղտնաբառը պետք է պարունակի առնվազն մեկ մեծատառ (A-Z)',
+    errPwSpecial: 'Գաղտնաբառը պետք է պարունակի առնվազն մեկ հատուկ նշան (!@#$% և այլն)',
+    loading: 'Բեռնվում է...',
+    errorPrefix: 'Սխալ. ',
+    logout: 'Ելք',
+    feedPlaceholder: (name) => `Ի՞նչ ես մտածում, ${name}...`,
+    postBtn: 'Հրապարակել',
+    noPostsYet: 'Դեռ ոչ մի հրապարակում չկա։ Եղիր առաջինը 👋',
+    likesCount: (n) => `❤️ ${n} հավանում${n > 1 ? 'ներ' : ''}`,
+    likeBtn: '❤️ Հավանել',
+    commentBtn: (n) => `💬 Մեկնաբանել${n > 0 ? ` (${n})` : ''}`,
+    shareBtn: '🔗 Կիսվել',
+    commentPlaceholder: 'Գրիր մեկնաբանություն...',
+    bioPlaceholder: 'Գրիր մի քանի բառ քո մասին...',
+    save: 'Պահպանել',
+    noBio: 'Դեռ ոչինչ չես գրել քո մասին։',
+    myPosts: 'Իմ հրապարակումները',
+    noOwnPosts: 'Դեռ ոչինչ չես հրապարակել։',
+    allMembers: 'Բոլոր գրանցվածները',
+    noMembers: 'Դեռ ուրիշ ոչ ոք չի գրանցվել։ Ուղարկիր այս app-ի հղումը ընկերներիդ 🙂',
+    navHome: 'Գլխավոր',
+    navMembers: 'Անդամներ',
+    navProfile: 'Իմ էջը',
+    justNow: 'հենց նոր',
+    minutesAgo: (n) => `${n} րոպե առաջ`,
+    hoursAgo: (n) => `${n} ժամ առաջ`,
+    daysAgo: (n) => `${n} օր առաջ`,
+    language: 'Լեզու',
+  },
+};
+
+function getPasswordError(pw, L) {
+  if (!pw || pw.length < 8) return L.errPwLength;
+  if (!/[A-Z]/.test(pw)) return L.errPwUpper;
+  if (!/[!@#$%^&*(),.?":{}|<>_\-+=~`\[\];'/\\]/.test(pw)) return L.errPwSpecial;
+  return null;
+}
+
 async function sb(path, options = {}, accessToken) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...options,
@@ -61,7 +198,39 @@ function Avatar({ name, color, size = 44 }) {
   );
 }
 
+function LangSwitch({ lang, setLang, align = 'right' }) {
+  return (
+    <div style={{ display: 'flex', gap: 6, justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}>
+      {LANGS.map(({ code, label }) => (
+        <button
+          key={code}
+          onClick={() => setLang(code)}
+          style={{
+            border: 'none',
+            background: lang === code ? '#8B5A9F' : '#F5F1EC',
+            color: lang === code ? 'white' : '#6B6255',
+            borderRadius: 8,
+            padding: '5px 11px',
+            fontSize: 12,
+            fontWeight: 600,
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function App() {
+  const [lang, setLang] = useState(() => {
+    try { return localStorage.getItem('aranzunut_lang') || 'en'; } catch (e) { return 'en'; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('aranzunut_lang', lang); } catch (e) {}
+  }, [lang]);
+  const L = translations[lang] || translations.en;
+
   const [session, setSession] = useState(null);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [profiles, setProfiles] = useState({});
@@ -73,10 +242,12 @@ function App() {
   const [authMode, setAuthMode] = useState('signin'); // signin | signup | forgot | reset
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
   const [colorChoice, setColorChoice] = useState(AVATAR_COLORS[0]);
   const [authBusy, setAuthBusy] = useState(false);
   const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [signUpDone, setSignUpDone] = useState(false);
 
@@ -129,7 +300,9 @@ function App() {
     const email = emailInput.trim();
     const password = passwordInput;
     const username = usernameInput.trim();
-    if (!email || !password || !username) { setError('Լրացրու բոլոր դաշտերը'); return; }
+    if (!email || !password || !username) { setError(L.errFillAll); return; }
+    const pwError = getPasswordError(password, L);
+    if (pwError) { setError(pwError); return; }
     setAuthBusy(true);
     setError(null);
     try {
@@ -142,9 +315,9 @@ function App() {
   },
 });
       if (signUpError) throw signUpError;
-      // Պրոֆիլը ստեղծվում է ավտոմատ database trigger-ով (handle_new_user)
+      // Profile is created automatically by a database trigger (handle_new_user)
       if (!data.session) {
-        // Email confirmation պահանջվում է. session դեռ չկա
+        // Email confirmation required — no session yet
         setSignUpDone(true);
       } else {
         await refreshAll();
@@ -155,7 +328,7 @@ function App() {
   const handleSignIn = async () => {
     const email = emailInput.trim();
     const password = passwordInput;
-    if (!email || !password) { setError('Լրացրու email և գաղտնաբառ'); return; }
+    if (!email || !password) { setError(L.errEmailPassword); return; }
     setAuthBusy(true);
     setError(null);
     try {
@@ -166,7 +339,7 @@ function App() {
 
   const handleForgotPassword = async () => {
     const email = emailInput.trim();
-    if (!email) { setError('Գրիր քո email-ը'); return; }
+    if (!email) { setError(L.errEnterEmail); return; }
     setAuthBusy(true);
     setError(null);
     try {
@@ -179,7 +352,8 @@ function App() {
   };
 
   const handleUpdatePassword = async () => {
-    if (!newPasswordInput || newPasswordInput.length < 6) { setError('Գաղտնաբառը պետք է լինի առնվազն 6 նիշ'); return; }
+    const pwError = getPasswordError(newPasswordInput, L);
+    if (pwError) { setError(pwError); return; }
     setAuthBusy(true);
     setError(null);
     try {
@@ -200,7 +374,7 @@ function App() {
   if (sessionLoading || (session && dataLoading && authMode !== 'reset')) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', justifyContent: 'center', color: '#A89F92' }}>
-        <span className="spin">⏳</span> Բեռնվում է...
+        <span className="spin">⏳</span> {L.loading}
       </div>
     );
   }
@@ -208,15 +382,21 @@ function App() {
   if (authMode === 'reset') {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-        <div style={{ background: 'white', borderRadius: 20, padding: 32, maxWidth: 380, width: '100%', boxShadow: '0 4px 20px rgba(43,38,34,0.08)', border: '1px solid #EDE7DE' }}>
-          <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Նոր գաղտնաբառ</div>
-          <div style={{ color: '#A89F92', fontSize: 13.5, marginBottom: 20 }}>Մուտքագրիր քո նոր գաղտնաբառը</div>
-          {error && <div style={{ background: '#FDECEC', color: '#B14343', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, marginBottom: 16 }}>Սխալ. {error}</div>}
-          <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Նոր գաղտնաբառ</label>
-          <input type="password" value={newPasswordInput} onChange={(e) => setNewPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUpdatePassword()} placeholder="Առնվազն 6 նիշ" style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 14px', fontSize: 15, outline: 'none', marginTop: 6, marginBottom: 16 }} />
-          <button onClick={handleUpdatePassword} disabled={authBusy} style={{ width: '100%', background: '#8B5A9F', color: 'white', border: 'none', borderRadius: 12, padding: '13px 0', fontWeight: 700, fontSize: 15 }}>
-            {authBusy ? 'Սպասիր...' : 'Պահպանել գաղտնաբառը'}
-          </button>
+        <div style={{ maxWidth: 380, width: '100%' }}>
+          <div style={{ marginBottom: 10 }}><LangSwitch lang={lang} setLang={setLang} /></div>
+          <div style={{ background: 'white', borderRadius: 20, padding: 32, width: '100%', boxShadow: '0 4px 20px rgba(43,38,34,0.08)', border: '1px solid #EDE7DE' }}>
+            <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 20, marginBottom: 6 }}>{L.newPasswordTitle}</div>
+            <div style={{ color: '#A89F92', fontSize: 13.5, marginBottom: 20 }}>{L.passwordHint}</div>
+            {error && <div style={{ background: '#FDECEC', color: '#B14343', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, marginBottom: 16 }}>{L.errorPrefix}{error}</div>}
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>{L.newPasswordLabel}</label>
+            <div style={{ position: 'relative', marginTop: 6, marginBottom: 16 }}>
+              <input type={showNewPassword ? 'text' : 'password'} value={newPasswordInput} onChange={(e) => setNewPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUpdatePassword()} placeholder={L.passwordPlaceholderSignup} style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 40px 11px 14px', fontSize: 15, outline: 'none' }} />
+              <button type="button" onClick={() => setShowNewPassword((v) => !v)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: 17, padding: 0, color: '#A89F92' }}>{showNewPassword ? '🙈' : '👁️'}</button>
+            </div>
+            <button onClick={handleUpdatePassword} disabled={authBusy} style={{ width: '100%', background: '#8B5A9F', color: 'white', border: 'none', borderRadius: 12, padding: '13px 0', fontWeight: 700, fontSize: 15 }}>
+              {authBusy ? L.pleaseWait : L.savePasswordBtn}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -226,25 +406,28 @@ function App() {
     if (authMode === 'forgot') {
       return (
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: 'white', borderRadius: 20, padding: 32, maxWidth: 380, width: '100%', boxShadow: '0 4px 20px rgba(43,38,34,0.08)', border: '1px solid #EDE7DE' }}>
-            <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Վերականգնել գաղտնաբառը</div>
-            {resetSent ? (
-              <div style={{ color: '#2B2622', fontSize: 14, lineHeight: 1.6, marginTop: 10 }}>
-                Ուղարկեցինք հղում քո email-ին ✅ Բացիր այն և հետևիր հրահանգներին։
+          <div style={{ maxWidth: 380, width: '100%' }}>
+            <div style={{ marginBottom: 10 }}><LangSwitch lang={lang} setLang={setLang} /></div>
+            <div style={{ background: 'white', borderRadius: 20, padding: 32, width: '100%', boxShadow: '0 4px 20px rgba(43,38,34,0.08)', border: '1px solid #EDE7DE' }}>
+              <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 20, marginBottom: 6 }}>{L.resetTitle}</div>
+              {resetSent ? (
+                <div style={{ color: '#2B2622', fontSize: 14, lineHeight: 1.6, marginTop: 10 }}>
+                  {L.resetSentMsg}
+                </div>
+              ) : (
+                <React.Fragment>
+                  <div style={{ color: '#A89F92', fontSize: 13.5, marginBottom: 20 }}>{L.resetDesc}</div>
+                  {error && <div style={{ background: '#FDECEC', color: '#B14343', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, marginBottom: 16 }}>{L.errorPrefix}{error}</div>}
+                  <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>{L.emailLabel}</label>
+                  <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleForgotPassword()} placeholder="you@example.com" style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 14px', fontSize: 15, outline: 'none', marginTop: 6, marginBottom: 16 }} />
+                  <button onClick={handleForgotPassword} disabled={authBusy} style={{ width: '100%', background: '#8B5A9F', color: 'white', border: 'none', borderRadius: 12, padding: '13px 0', fontWeight: 700, fontSize: 15 }}>
+                    {authBusy ? L.pleaseWait : L.sendLinkBtn}
+                  </button>
+                </React.Fragment>
+              )}
+              <div style={{ textAlign: 'center', marginTop: 16 }}>
+                <button onClick={() => { setAuthMode('signin'); setError(null); setResetSent(false); }} style={{ background: 'none', border: 'none', color: '#8B5A9F', fontWeight: 600, fontSize: 13.5 }}>{L.backToSignin}</button>
               </div>
-            ) : (
-              <React.Fragment>
-                <div style={{ color: '#A89F92', fontSize: 13.5, marginBottom: 20 }}>Գրիր քո email-ը, կուղարկենք գաղտնաբառը փոխելու հղում</div>
-                {error && <div style={{ background: '#FDECEC', color: '#B14343', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, marginBottom: 16 }}>Սխալ. {error}</div>}
-                <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Email</label>
-                <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleForgotPassword()} placeholder="you@example.com" style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 14px', fontSize: 15, outline: 'none', marginTop: 6, marginBottom: 16 }} />
-                <button onClick={handleForgotPassword} disabled={authBusy} style={{ width: '100%', background: '#8B5A9F', color: 'white', border: 'none', borderRadius: 12, padding: '13px 0', fontWeight: 700, fontSize: 15 }}>
-                  {authBusy ? 'Սպասիր...' : 'Ուղարկել հղումը'}
-                </button>
-              </React.Fragment>
-            )}
-            <div style={{ textAlign: 'center', marginTop: 16 }}>
-              <button onClick={() => { setAuthMode('signin'); setError(null); setResetSent(false); }} style={{ background: 'none', border: 'none', color: '#8B5A9F', fontWeight: 600, fontSize: 13.5 }}>← Վերադառնալ մուտքին</button>
             </div>
           </div>
         </div>
@@ -254,11 +437,14 @@ function App() {
     if (signUpDone) {
       return (
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: 'white', borderRadius: 20, padding: 32, maxWidth: 380, width: '100%', boxShadow: '0 4px 20px rgba(43,38,34,0.08)', border: '1px solid #EDE7DE', textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 10 }}>📧</div>
-            <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 20, marginBottom: 10 }}>Ստուգիր քո email-ը</div>
-            <div style={{ color: '#6B6255', fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>Ուղարկեցինք հաստատման հղում {emailInput}-ին։ Բացիր այն, որ մուտք գործես Առանձնուտ։</div>
-            <button onClick={() => { setSignUpDone(false); setAuthMode('signin'); setEmailInput(''); setPasswordInput(''); setUsernameInput(''); }} style={{ background: 'none', border: 'none', color: '#8B5A9F', fontWeight: 600, fontSize: 13.5 }}>← Վերադառնալ մուտքին</button>
+          <div style={{ maxWidth: 380, width: '100%' }}>
+            <div style={{ marginBottom: 10 }}><LangSwitch lang={lang} setLang={setLang} /></div>
+            <div style={{ background: 'white', borderRadius: 20, padding: 32, width: '100%', boxShadow: '0 4px 20px rgba(43,38,34,0.08)', border: '1px solid #EDE7DE', textAlign: 'center' }}>
+              <div style={{ fontSize: 40, marginBottom: 10 }}>📧</div>
+              <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 20, marginBottom: 10 }}>{L.checkEmailTitle}</div>
+              <div style={{ color: '#6B6255', fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>{L.checkEmailMsg(emailInput)}</div>
+              <button onClick={() => { setSignUpDone(false); setAuthMode('signin'); setEmailInput(''); setPasswordInput(''); setUsernameInput(''); }} style={{ background: 'none', border: 'none', color: '#8B5A9F', fontWeight: 600, fontSize: 13.5 }}>{L.backToSignin}</button>
+            </div>
           </div>
         </div>
       );
@@ -266,54 +452,61 @@ function App() {
 
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-        <div style={{ background: 'white', borderRadius: 20, padding: 32, maxWidth: 380, width: '100%', boxShadow: '0 4px 20px rgba(43,38,34,0.08)', border: '1px solid #EDE7DE' }}>
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #E8A87C, #C97064)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'white', fontFamily: "'Poppins', sans-serif", fontSize: 24, margin: '0 auto 12px' }}>Ա</div>
-            <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 22 }}>Առանձնուտ</div>
-            <div style={{ color: '#A89F92', fontSize: 13.5, marginTop: 4 }}>Իրական հաշիվ, իրական database</div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, marginBottom: 20, background: '#F5F1EC', borderRadius: 12, padding: 4 }}>
-            <button onClick={() => { setAuthMode('signin'); setError(null); }} style={{ flex: 1, border: 'none', borderRadius: 9, padding: '9px 0', fontWeight: 600, fontSize: 13.5, background: authMode === 'signin' ? 'white' : 'transparent', color: authMode === 'signin' ? '#2B2622' : '#A89F92', boxShadow: authMode === 'signin' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>Մուտք</button>
-            <button onClick={() => { setAuthMode('signup'); setError(null); }} style={{ flex: 1, border: 'none', borderRadius: 9, padding: '9px 0', fontWeight: 600, fontSize: 13.5, background: authMode === 'signup' ? 'white' : 'transparent', color: authMode === 'signup' ? '#2B2622' : '#A89F92', boxShadow: authMode === 'signup' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>Գրանցում</button>
-          </div>
-
-          {error && <div style={{ background: '#FDECEC', color: '#B14343', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, marginBottom: 16 }}>Սխալ. {error}</div>}
-
-          {authMode === 'signup' && (
-            <React.Fragment>
-              <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Անուն</label>
-              <input value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)} placeholder="օր. Ռիմա Հակոբյան" style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 14px', fontSize: 15, outline: 'none', marginTop: 6, marginBottom: 16 }} />
-            </React.Fragment>
-          )}
-
-          <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Email</label>
-          <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} placeholder="you@example.com" style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 14px', fontSize: 15, outline: 'none', marginTop: 6, marginBottom: 16 }} />
-
-          <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Գաղտնաբառ</label>
-          <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (authMode === 'signup' ? handleSignUp() : handleSignIn())} placeholder="Առնվազն 6 նիշ" style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 14px', fontSize: 15, outline: 'none', marginTop: 6, marginBottom: authMode === 'signin' ? 8 : 16 }} />
-
-          {authMode === 'signin' && (
-            <div style={{ textAlign: 'right', marginBottom: 16 }}>
-              <button onClick={() => { setAuthMode('forgot'); setError(null); }} style={{ background: 'none', border: 'none', color: '#8B5A9F', fontWeight: 600, fontSize: 12.5 }}>Մոռացե՞լ եք գաղտնաբառը</button>
+        <div style={{ maxWidth: 380, width: '100%' }}>
+          <div style={{ marginBottom: 10 }}><LangSwitch lang={lang} setLang={setLang} /></div>
+          <div style={{ background: 'white', borderRadius: 20, padding: 32, width: '100%', boxShadow: '0 4px 20px rgba(43,38,34,0.08)', border: '1px solid #EDE7DE' }}>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #E8A87C, #C97064)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'white', fontFamily: "'Poppins', sans-serif", fontSize: 24, margin: '0 auto 12px' }}>Ա</div>
+              <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 22 }}>{L.appName}</div>
+              <div style={{ color: '#A89F92', fontSize: 13.5, marginTop: 4 }}>{L.tagline}</div>
             </div>
-          )}
 
-          {authMode === 'signup' && (
-            <React.Fragment>
-              <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>Ընտրիր գույն</label>
-              <div style={{ display: 'flex', gap: 10, marginTop: 8, marginBottom: 22 }}>
-                {AVATAR_COLORS.map((c) => (
-                  <button key={c} onClick={() => setColorChoice(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: colorChoice === c ? '3px solid #2B2622' : '3px solid transparent', cursor: 'pointer', padding: 0 }} />
-                ))}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20, background: '#F5F1EC', borderRadius: 12, padding: 4 }}>
+              <button onClick={() => { setAuthMode('signin'); setError(null); }} style={{ flex: 1, border: 'none', borderRadius: 9, padding: '9px 0', fontWeight: 600, fontSize: 13.5, background: authMode === 'signin' ? 'white' : 'transparent', color: authMode === 'signin' ? '#2B2622' : '#A89F92', boxShadow: authMode === 'signin' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>{L.tabSignin}</button>
+              <button onClick={() => { setAuthMode('signup'); setError(null); }} style={{ flex: 1, border: 'none', borderRadius: 9, padding: '9px 0', fontWeight: 600, fontSize: 13.5, background: authMode === 'signup' ? 'white' : 'transparent', color: authMode === 'signup' ? '#2B2622' : '#A89F92', boxShadow: authMode === 'signup' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>{L.tabSignup}</button>
+            </div>
+
+            {error && <div style={{ background: '#FDECEC', color: '#B14343', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, marginBottom: 16 }}>{L.errorPrefix}{error}</div>}
+
+            {authMode === 'signup' && (
+              <React.Fragment>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>{L.nameLabel}</label>
+                <input value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)} placeholder={L.namePlaceholder} style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 14px', fontSize: 15, outline: 'none', marginTop: 6, marginBottom: 16 }} />
+              </React.Fragment>
+            )}
+
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>{L.emailLabel}</label>
+            <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} placeholder="you@example.com" style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 14px', fontSize: 15, outline: 'none', marginTop: 6, marginBottom: 16 }} />
+
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>{L.passwordLabel}</label>
+            {authMode === 'signup' && <div style={{ fontSize: 11.5, color: '#A89F92', marginTop: 3 }}>{L.passwordHint}</div>}
+            <div style={{ position: 'relative', marginTop: 6, marginBottom: authMode === 'signin' ? 8 : 16 }}>
+              <input type={showPassword ? 'text' : 'password'} value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (authMode === 'signup' ? handleSignUp() : handleSignIn())} placeholder={authMode === 'signup' ? L.passwordPlaceholderSignup : L.passwordPlaceholderSignin} style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 12, padding: '11px 40px 11px 14px', fontSize: 15, outline: 'none' }} />
+              <button type="button" onClick={() => setShowPassword((v) => !v)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: 17, padding: 0, color: '#A89F92' }}>{showPassword ? '🙈' : '👁️'}</button>
+            </div>
+
+            {authMode === 'signin' && (
+              <div style={{ textAlign: 'right', marginBottom: 16 }}>
+                <button onClick={() => { setAuthMode('forgot'); setError(null); }} style={{ background: 'none', border: 'none', color: '#8B5A9F', fontWeight: 600, fontSize: 12.5 }}>{L.forgotPassword}</button>
               </div>
-            </React.Fragment>
-          )}
+            )}
 
-          <button onClick={authMode === 'signup' ? handleSignUp : handleSignIn} disabled={authBusy} style={{ width: '100%', background: '#8B5A9F', color: 'white', border: 'none', borderRadius: 12, padding: '13px 0', fontWeight: 700, fontSize: 15, marginTop: authMode === 'signin' ? 6 : 0 }}>
-            {authBusy ? 'Սպասիր...' : authMode === 'signup' ? 'Գրանցվել' : 'Մուտք գործել'}
-          </button>
-          <div style={{ fontSize: 12, color: '#A89F92', marginTop: 14, textAlign: 'center', lineHeight: 1.5 }}>Քո հաշիվը պաշտպանված է գաղտնաբառով։ Ուրիշ ոչ ոք չի կարող մուտք գործել քո տեղից։</div>
+            {authMode === 'signup' && (
+              <React.Fragment>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#6B6255' }}>{L.chooseColor}</label>
+                <div style={{ display: 'flex', gap: 10, marginTop: 8, marginBottom: 22 }}>
+                  {AVATAR_COLORS.map((c) => (
+                    <button key={c} onClick={() => setColorChoice(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: colorChoice === c ? '3px solid #2B2622' : '3px solid transparent', cursor: 'pointer', padding: 0 }} />
+                  ))}
+                </div>
+              </React.Fragment>
+            )}
+
+            <button onClick={authMode === 'signup' ? handleSignUp : handleSignIn} disabled={authBusy} style={{ width: '100%', background: '#8B5A9F', color: 'white', border: 'none', borderRadius: 12, padding: '13px 0', fontWeight: 700, fontSize: 15, marginTop: authMode === 'signin' ? 6 : 0 }}>
+              {authBusy ? L.pleaseWait : authMode === 'signup' ? L.signUpBtn : L.signInBtn}
+            </button>
+            <div style={{ fontSize: 12, color: '#A89F92', marginTop: 14, textAlign: 'center', lineHeight: 1.5 }}>{L.accountProtected}</div>
+          </div>
         </div>
       </div>
     );
@@ -361,11 +554,11 @@ function App() {
   const timeAgo = (ts) => {
     if (!ts) return '';
     const mins = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
-    if (mins < 1) return 'հենց նոր';
-    if (mins < 60) return `${mins} րոպե առաջ`;
+    if (mins < 1) return L.justNow;
+    if (mins < 60) return L.minutesAgo(mins);
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs} ժամ առաջ`;
-    return `${Math.floor(hrs / 24)} օր առաջ`;
+    if (hrs < 24) return L.hoursAgo(hrs);
+    return L.daysAgo(Math.floor(hrs / 24));
   };
 
   function findAuthorProfile(name) {
@@ -386,11 +579,11 @@ function App() {
           </div>
         </div>
         <p style={{ fontSize: 15, lineHeight: 1.6, margin: '0 0 14px', whiteSpace: 'pre-wrap' }}>{post.content}</p>
-        {post.likes_count > 0 && <div style={{ fontSize: 12.5, color: '#A89F92', marginBottom: 8 }}>❤️ {post.likes_count} հավանում{post.likes_count > 1 ? 'ներ' : ''}</div>}
+        {post.likes_count > 0 && <div style={{ fontSize: 12.5, color: '#A89F92', marginBottom: 8 }}>{L.likesCount(post.likes_count)}</div>}
         <div style={{ display: 'flex', borderTop: '1px solid #F0EBE3', paddingTop: 10, gap: 4 }}>
-          <button className="action-btn" onClick={() => likePost(post)} style={{ flex: 1, border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 0', color: '#6B6255', fontWeight: 600, fontSize: 13.5 }}>❤️ Հավանել</button>
-          <button className="action-btn" onClick={() => setOpenComments((p) => ({ ...p, [post.id]: !p[post.id] }))} style={{ flex: 1, border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 0', color: '#6B6255', fontWeight: 600, fontSize: 13.5 }}>💬 Մեկնաբանել {postComments.length > 0 ? `(${postComments.length})` : ''}</button>
-          <button className="action-btn" style={{ flex: 1, border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 0', color: '#6B6255', fontWeight: 600, fontSize: 13.5 }}>🔗 Կիսվել</button>
+          <button className="action-btn" onClick={() => likePost(post)} style={{ flex: 1, border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 0', color: '#6B6255', fontWeight: 600, fontSize: 13.5 }}>{L.likeBtn}</button>
+          <button className="action-btn" onClick={() => setOpenComments((p) => ({ ...p, [post.id]: !p[post.id] }))} style={{ flex: 1, border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 0', color: '#6B6255', fontWeight: 600, fontSize: 13.5 }}>{L.commentBtn(postComments.length)}</button>
+          <button className="action-btn" style={{ flex: 1, border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 0', color: '#6B6255', fontWeight: 600, fontSize: 13.5 }}>{L.shareBtn}</button>
         </div>
         {isOpen && (
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #F0EBE3' }}>
@@ -408,7 +601,7 @@ function App() {
             })}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
               <Avatar name={me.username} color={me.avatar_color} size={30} />
-              <input value={commentDrafts[post.id] || ''} onChange={(e) => setCommentDrafts((prev) => ({ ...prev, [post.id]: e.target.value }))} onKeyDown={(e) => e.key === 'Enter' && addComment(post.id)} placeholder="Գրիր մեկնաբանություն..." style={{ flex: 1, border: '1px solid #EDE7DE', borderRadius: 20, padding: '8px 14px', fontSize: 13.5, outline: 'none' }} />
+              <input value={commentDrafts[post.id] || ''} onChange={(e) => setCommentDrafts((prev) => ({ ...prev, [post.id]: e.target.value }))} onKeyDown={(e) => e.key === 'Enter' && addComment(post.id)} placeholder={L.commentPlaceholder} style={{ flex: 1, border: '1px solid #EDE7DE', borderRadius: 20, padding: '8px 14px', fontSize: 13.5, outline: 'none' }} />
               <button className="action-btn" onClick={() => addComment(post.id)} style={{ background: '#8B5A9F', border: 'none', borderRadius: '50%', width: 32, height: 32, color: 'white', flexShrink: 0 }}>➤</button>
             </div>
           </div>
@@ -422,28 +615,29 @@ function App() {
       <header style={{ background: '#2B2622', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg, #E8A87C, #C97064)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'white', fontFamily: "'Poppins', sans-serif", fontSize: 16 }}>Ա</div>
-          <span style={{ color: '#F5F1EC', fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 19 }}>Առանձնուտ</span>
+          <span style={{ color: '#F5F1EC', fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 19 }}>{L.appName}</span>
         </div>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <LangSwitch lang={lang} setLang={setLang} />
           <span style={{ fontSize: 18 }}>🔔</span>
-          <button onClick={logout} title="Ելք" style={{ background: 'none', border: 'none', fontSize: 18 }}>🚪</button>
+          <button onClick={logout} title={L.logout} style={{ background: 'none', border: 'none', fontSize: 18 }}>🚪</button>
           <Avatar name={me.username} color={me.avatar_color} size={32} />
         </div>
       </header>
-      {error && <div style={{ background: '#FDECEC', color: '#B14343', padding: '10px 16px', fontSize: 12.5, textAlign: 'center' }}>Սխալ. {error}</div>}
+      {error && <div style={{ background: '#FDECEC', color: '#B14343', padding: '10px 16px', fontSize: 12.5, textAlign: 'center' }}>{L.errorPrefix}{error}</div>}
       <main style={{ maxWidth: 560, margin: '0 auto', padding: '16px 12px 90px' }}>
         {activeTab === 'feed' && (
           <React.Fragment>
             <div style={{ background: 'white', borderRadius: 16, padding: 16, marginBottom: 16, boxShadow: '0 1px 3px rgba(43,38,34,0.06)', border: '1px solid #EDE7DE' }}>
               <div style={{ display: 'flex', gap: 10 }}>
                 <Avatar name={me.username} color={me.avatar_color} />
-                <textarea value={newPostText} onChange={(e) => setNewPostText(e.target.value)} placeholder={`Ի՞նչ ես մտածում, ${me.username}...`} rows={2} style={{ flex: 1, border: 'none', outline: 'none', resize: 'none', fontSize: 15, background: '#F9F6F1', borderRadius: 12, padding: '10px 14px' }} />
+                <textarea value={newPostText} onChange={(e) => setNewPostText(e.target.value)} placeholder={L.feedPlaceholder(me.username)} rows={2} style={{ flex: 1, border: 'none', outline: 'none', resize: 'none', fontSize: 15, background: '#F9F6F1', borderRadius: 12, padding: '10px 14px' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, paddingTop: 12, borderTop: '1px solid #F0EBE3' }}>
-                <button className="action-btn" onClick={publishPost} disabled={!newPostText.trim()} style={{ background: newPostText.trim() ? '#8B5A9F' : '#E5DFD5', color: newPostText.trim() ? 'white' : '#A89F92', border: 'none', borderRadius: 10, padding: '8px 18px', fontWeight: 600, fontSize: 14 }}>Հրապարակել</button>
+                <button className="action-btn" onClick={publishPost} disabled={!newPostText.trim()} style={{ background: newPostText.trim() ? '#8B5A9F' : '#E5DFD5', color: newPostText.trim() ? 'white' : '#A89F92', border: 'none', borderRadius: 10, padding: '8px 18px', fontWeight: 600, fontSize: 14 }}>{L.postBtn}</button>
               </div>
             </div>
-            {posts.length === 0 && <div style={{ textAlign: 'center', color: '#A89F92', padding: '40px 0', fontSize: 14 }}>Դեռ ոչ մի հրապարակում չկա։ Եղիր առաջինը 👋</div>}
+            {posts.length === 0 && <div style={{ textAlign: 'center', color: '#A89F92', padding: '40px 0', fontSize: 14 }}>{L.noPostsYet}</div>}
             {posts.map((post) => <PostCard key={post.id} post={post} />)}
           </React.Fragment>
         )}
@@ -455,25 +649,29 @@ function App() {
               <div style={{ fontSize: 12, color: '#A89F92', marginTop: 2 }}>{session.user.email}</div>
               {editingBio ? (
                 <div style={{ marginTop: 14 }}>
-                  <textarea value={bioDraft} onChange={(e) => setBioDraft(e.target.value)} placeholder="Գրիր մի քանի բառ քո մասին..." rows={2} style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 10, padding: 10, fontSize: 14, outline: 'none', resize: 'none' }} />
-                  <button onClick={saveBio} style={{ marginTop: 8, background: '#8B5A9F', color: 'white', border: 'none', borderRadius: 10, padding: '8px 18px', fontWeight: 600, fontSize: 13.5 }}>Պահպանել</button>
+                  <textarea value={bioDraft} onChange={(e) => setBioDraft(e.target.value)} placeholder={L.bioPlaceholder} rows={2} style={{ width: '100%', border: '1px solid #EDE7DE', borderRadius: 10, padding: 10, fontSize: 14, outline: 'none', resize: 'none' }} />
+                  <button onClick={saveBio} style={{ marginTop: 8, background: '#8B5A9F', color: 'white', border: 'none', borderRadius: 10, padding: '8px 18px', fontWeight: 600, fontSize: 13.5 }}>{L.save}</button>
                 </div>
               ) : (
                 <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  <div style={{ fontSize: 14, color: me.bio ? '#2B2622' : '#A89F92' }}>{me.bio || 'Դեռ ոչինչ չես գրել քո մասին։'}</div>
+                  <div style={{ fontSize: 14, color: me.bio ? '#2B2622' : '#A89F92' }}>{me.bio || L.noBio}</div>
                   <button onClick={() => { setEditingBio(true); setBioDraft(me.bio); }} style={{ background: 'none', border: 'none', fontSize: 13 }}>✏️</button>
                 </div>
               )}
+              <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #F0EBE3', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                <span style={{ fontSize: 12.5, color: '#6B6255', fontWeight: 600 }}>{L.language}</span>
+                <LangSwitch lang={lang} setLang={setLang} />
+              </div>
             </div>
-            <div style={{ fontWeight: 700, fontSize: 15, margin: '4px 0 10px' }}>Իմ հրապարակումները</div>
-            {posts.filter((p) => p.author === me.username).length === 0 && <div style={{ textAlign: 'center', color: '#A89F92', padding: '24px 0', fontSize: 14 }}>Դեռ ոչինչ չես հրապարակել։</div>}
+            <div style={{ fontWeight: 700, fontSize: 15, margin: '4px 0 10px' }}>{L.myPosts}</div>
+            {posts.filter((p) => p.author === me.username).length === 0 && <div style={{ textAlign: 'center', color: '#A89F92', padding: '24px 0', fontSize: 14 }}>{L.noOwnPosts}</div>}
             {posts.filter((p) => p.author === me.username).map((post) => <PostCard key={post.id} post={post} />)}
           </div>
         )}
         {activeTab === 'friends' && (
           <div>
-            <div style={{ fontWeight: 700, fontSize: 15, margin: '4px 0 10px' }}>Բոլոր գրանցվածները</div>
-            {allUsers.length === 0 && <div style={{ textAlign: 'center', color: '#A89F92', padding: '24px 0', fontSize: 14 }}>Դեռ ուրիշ ոչ ոք չի գրանցվել։ Ուղարկիր այս app-ի հղումը ընկերներիդ 🙂</div>}
+            <div style={{ fontWeight: 700, fontSize: 15, margin: '4px 0 10px' }}>{L.allMembers}</div>
+            {allUsers.length === 0 && <div style={{ textAlign: 'center', color: '#A89F92', padding: '24px 0', fontSize: 14 }}>{L.noMembers}</div>}
             {allUsers.map((u) => (
               <div key={u.user_id} style={{ background: 'white', borderRadius: 14, padding: 12, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #EDE7DE' }}>
                 <Avatar name={u.username} color={u.avatar_color} />
@@ -484,7 +682,7 @@ function App() {
         )}
       </main>
       <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', borderTop: '1px solid #EDE7DE', display: 'flex', justifyContent: 'space-around', padding: '10px 0 14px', maxWidth: 560, margin: '0 auto' }}>
-        {[{ key: 'feed', icon: '🏠', label: 'Գլխավոր' }, { key: 'friends', icon: '👥', label: 'Անդամներ' }, { key: 'profile', icon: '👤', label: 'Իմ էջը' }].map(({ key, icon, label }) => (
+        {[{ key: 'feed', icon: '🏠', label: L.navHome }, { key: 'friends', icon: '👥', label: L.navMembers }, { key: 'profile', icon: '👤', label: L.navProfile }].map(({ key, icon, label }) => (
           <button key={key} className="action-btn" onClick={() => setActiveTab(key)} style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: activeTab === key ? '#8B5A9F' : '#A89F92' }}>
             <span style={{ fontSize: 20 }}>{icon}</span>
             <span style={{ fontSize: 11, fontWeight: 600 }}>{label}</span>
