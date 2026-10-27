@@ -311,7 +311,7 @@ function App() {
   password,
   options: {
     data: { username, avatar_color: colorChoice },
-    emailRedirectTo: 'https://rimasargsyan.github.io/aranzunut',
+    emailRedirectTo: 'https://aranzunut.app',
   },
 });
       if (signUpError) throw signUpError;
@@ -344,7 +344,7 @@ function App() {
     setError(null);
     try {
       const { error: resetError } = await supabaseClient.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://rimasargsyan.github.io/aranzunut',
+        redirectTo: 'https://aranzunut.app',
       });
       if (resetError) throw resetError;
       setResetSent(true);
